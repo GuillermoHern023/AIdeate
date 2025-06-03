@@ -10,6 +10,7 @@ public class OllamaChat : MonoBehaviour
     public TMP_InputField userInput;
     public Button submitButton;
     public TMP_Text responseText;
+    public string modelName = "deepseek-r1:7b";
 
     void Start()
     {
@@ -18,16 +19,13 @@ public class OllamaChat : MonoBehaviour
 
     void OnSubmit()
     {
-        // Add instructions for concise answers here:
-        string instructions = "Answer briefly and directly in 1-2 sentences only. No extra details.";
-        string prompt = instructions + "\n\n" + userInput.text;
-
+        string prompt = Prompts.BuildDefaultPrompt(userInput.text);
         StartCoroutine(SendToOllama(prompt));
     }
 
     IEnumerator SendToOllama(string prompt)
     {
-        string json = $"{{\"model\": \"deepseek-r1:7b\", \"prompt\": \"{EscapeJson(prompt)}\", \"stream\": false}}";
+        string json = $"{{\"model\": \"{modelName}\", \"prompt\": \"{EscapeJson(prompt)}\", \"stream\": false}}";
         UnityWebRequest request = new UnityWebRequest("http://localhost:11434/api/generate", "POST");
         byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
@@ -38,26 +36,32 @@ public class OllamaChat : MonoBehaviour
 
         if (request.result == UnityWebRequest.Result.Success)
         {
-            string raw = request.downloadHandler.text;
-
-            // Extract response from JSON by finding "response":"...".
-            string marker = "\"response\":\"";
-            int start = raw.IndexOf(marker);
-            if (start >= 0)
+            try
             {
-                start += marker.Length;
-                int end = raw.IndexOf("\"", start);
-                if (end >= 0)
-                {
-                    string response = raw.Substring(start, end - start);
-                    // Unescape common escape sequences from JSON string
-                    response = response.Replace("\\n", "\n").Replace("\\\"", "\"");
-                    responseText.text = response;
-                    yield break;
-                }
-            }
+                string raw = request.downloadHandler.text;
+                OllamaResponse res = JsonUtility.FromJson<OllamaResponse>(raw);
 
-            responseText.text = "Error: Could not parse response.";
+                string output = res.response;
+
+                // Strip <think>...</think> blocks
+                while (true)
+                {
+                    int thinkStart = output.IndexOf("<think>");
+                    int thinkEnd = output.IndexOf("</think>");
+                    if (thinkStart >= 0 && thinkEnd > thinkStart)
+                    {
+                        output = output.Remove(thinkStart, (thinkEnd + 8) - thinkStart);
+                    }
+                    else break;
+                }
+
+                responseText.text = output.Trim();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Parsing error: {e.Message}\nRaw response: {request.downloadHandler.text}");
+                responseText.text = "Error: Could not parse JSON response.";
+            }
         }
         else
         {
@@ -65,9 +69,14 @@ public class OllamaChat : MonoBehaviour
         }
     }
 
-    // Helper method to escape special characters in JSON strings
     string EscapeJson(string s)
     {
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
+    }
+
+    [System.Serializable]
+    private class OllamaResponse
+    {
+        public string response;
     }
 }
