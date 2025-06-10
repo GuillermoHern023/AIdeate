@@ -4,13 +4,21 @@ using UnityEngine.Networking;
 using System.Collections;
 using System.Text;
 using TMPro;
+using System.Collections.Generic;
 
 public class OllamaChat : MonoBehaviour
 {
+    [Header("UI References")]
     public TMP_InputField userInput;
     public Button submitButton;
-    public TMP_Text responseText;
+    public ScrollRect chatScrollRect;
+    public RectTransform chatContent;
+    public GameObject chatMessagePrefab; // Should have a TMP_Text component
+
+    [Header("Ollama Settings")]
     public string modelName = "deepseek-r1:7b";
+
+    private List<string> conversationHistory = new List<string>();
 
     void Start()
     {
@@ -19,8 +27,20 @@ public class OllamaChat : MonoBehaviour
 
     void OnSubmit()
     {
-        string prompt = Prompts.BuildDefaultPrompt(userInput.text);
+        string userMessage = userInput.text.Trim();
+        if (string.IsNullOrEmpty(userMessage)) return;
+
+        // Add user message to history and UI
+        conversationHistory.Add($"User: {userMessage}");
+
+        // Build conversation string
+        string conversation = string.Join("\n", conversationHistory) + "\nAI:";
+
+        // Use your prompt builder
+        string prompt = Prompts.BuildDefaultPrompt(conversation);
+
         StartCoroutine(SendToOllama(prompt));
+        userInput.text = "";
     }
 
     IEnumerator SendToOllama(string prompt)
@@ -55,18 +75,36 @@ public class OllamaChat : MonoBehaviour
                     else break;
                 }
 
-                responseText.text = output.Trim();
+                // Add AI response to history and UI
+                conversationHistory.Add($"AI: {output.Trim()}");
+                AddMessage(output.Trim(), false);
             }
             catch (System.Exception e)
             {
+                AddMessage("Error: Could not parse JSON response.", false);
                 Debug.LogError($"Parsing error: {e.Message}\nRaw response: {request.downloadHandler.text}");
-                responseText.text = "Error: Could not parse JSON response.";
             }
         }
         else
         {
-            responseText.text = $"Error: {request.error}";
+            AddMessage($"Error: {request.error}", false);
         }
+    }
+
+    void AddMessage(string message, bool isUser)
+    {
+        GameObject msgObj = Instantiate(chatMessagePrefab, chatContent);
+        TMP_Text msgText = msgObj.GetComponent<TMP_Text>();
+        msgText.text = message;
+
+        // Optionally style user/AI messages differently
+        msgText.color = isUser ? Color.cyan : Color.black;
+        msgText.alignment = isUser ? TextAlignmentOptions.TopRight : TextAlignmentOptions.TopLeft;
+
+
+        // Force scroll to bottom
+        Canvas.ForceUpdateCanvases();
+        chatScrollRect.verticalNormalizedPosition = 0f;
     }
 
     string EscapeJson(string s)
@@ -80,3 +118,4 @@ public class OllamaChat : MonoBehaviour
         public string response;
     }
 }
+
