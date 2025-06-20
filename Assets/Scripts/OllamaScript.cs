@@ -6,14 +6,15 @@ using System.Text;
 using TMPro;
 using System.Collections.Generic;
 
-public class OllamaChat : MonoBehaviour
+public class OllamaScript : MonoBehaviour
 {
     [Header("UI References")]
     public TMP_InputField userInput;
     public Button submitButton;
     public ScrollRect chatScrollRect;
     public RectTransform chatContent;
-    public GameObject chatMessagePrefab; // Should have a TMP_Text component
+    public GameObject userMessagePrefab;
+    public GameObject aiMessagePrefab;
 
     [Header("Ollama Settings")]
     public string modelName = "deepseek-r1:7b";
@@ -32,11 +33,10 @@ public class OllamaChat : MonoBehaviour
 
         // Add user message to history and UI
         conversationHistory.Add($"User: {userMessage}");
+        AddMessage(userMessage, true); // Show user message bubble
 
-        // Build conversation string
+        // Build conversation string for prompt
         string conversation = string.Join("\n", conversationHistory) + "\nAI:";
-
-        // Use your prompt builder
         string prompt = Prompts.BuildDefaultPrompt(conversation);
 
         StartCoroutine(SendToOllama(prompt));
@@ -77,7 +77,7 @@ public class OllamaChat : MonoBehaviour
 
                 // Add AI response to history and UI
                 conversationHistory.Add($"AI: {output.Trim()}");
-                AddMessage(output.Trim(), false);
+                AddMessage(output.Trim(), false); // Show AI message bubble
             }
             catch (System.Exception e)
             {
@@ -93,16 +93,11 @@ public class OllamaChat : MonoBehaviour
 
     void AddMessage(string message, bool isUser)
     {
-        GameObject msgObj = Instantiate(chatMessagePrefab, chatContent);
-        TMP_Text msgText = msgObj.GetComponent<TMP_Text>();
+        GameObject prefab = isUser ? userMessagePrefab : aiMessagePrefab;
+        GameObject msgObj = Instantiate(prefab, chatContent);
+        TMP_Text msgText = msgObj.GetComponentInChildren<TMP_Text>();
         msgText.text = message;
 
-        // Optionally style user/AI messages differently
-        msgText.color = isUser ? Color.cyan : Color.black;
-        msgText.alignment = isUser ? TextAlignmentOptions.TopRight : TextAlignmentOptions.TopLeft;
-
-
-        // Force scroll to bottom
         Canvas.ForceUpdateCanvases();
         chatScrollRect.verticalNormalizedPosition = 0f;
     }
@@ -118,4 +113,3 @@ public class OllamaChat : MonoBehaviour
         public string response;
     }
 }
-
