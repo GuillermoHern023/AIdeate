@@ -43,6 +43,35 @@ public class OllamaScript : MonoBehaviour
         { DesignStep.Test, new List<string>() }
     };
 
+    // Lock state for each step
+    private Dictionary<DesignStep, bool> stepLocked = new Dictionary<DesignStep, bool>()
+    {
+        { DesignStep.Empathize, false },
+        { DesignStep.Define, false },
+        { DesignStep.Ideate, false },
+        { DesignStep.Prototype, false },
+        { DesignStep.Test, false }
+    };
+
+    // --- Lock/Unlock Methods ---
+    public void SetStepLocked(DesignStep step, bool locked)
+    {
+        stepLocked[step] = locked;
+        Debug.Log($"SetStepLocked: {step} is now {(locked ? "LOCKED" : "UNLOCKED")}");
+    }
+
+    public bool IsStepLocked(DesignStep step)
+    {
+        return stepLocked.ContainsKey(step) && stepLocked[step];
+    }
+
+    public void ToggleStepLocked(DesignStep step)
+    {
+        stepLocked[step] = !stepLocked[step];
+        Debug.Log($"ToggleStepLocked: {step} is now {(stepLocked[step] ? "LOCKED" : "UNLOCKED")}");
+    }
+
+    // --- Chat Submission ---
     void Start()
     {
         submitButton.onClick.AddListener(OnSubmit);
@@ -58,15 +87,37 @@ public class OllamaScript : MonoBehaviour
             mainConversationHistory.Add($"User: {userMessage}");
             AddMessage(userMessage, true); // Main chat
             string conversation = string.Join("\n", mainConversationHistory) + "\nAI:";
-            string prompt = Prompts.BuildDefaultPrompt(conversation);
+            // You can use a default prompt here if you wish
+            string prompt = Prompts.BuildEmpathizePrompt(conversation, "");
             StartCoroutine(SendToOllama(prompt, DesignStep.None));
         }
         else
         {
             stepConversations[currentStep].Add($"User: {userMessage}");
             AddStepMessage(userMessage, true, currentStep); // Step chat
-            string conversation = string.Join("\n", stepConversations[currentStep]) + "\nAI:";
-            string prompt = Prompts.BuildDefaultPrompt(conversation);
+
+            // Combine main chat and step chat for context
+            string conversation = string.Join("\n", mainConversationHistory) + "\n" +
+                                  string.Join("\n", stepConversations[currentStep]) + "\nAI:";
+            string prompt = "";
+            switch (currentStep)
+            {
+                case DesignStep.Empathize:
+                    prompt = Prompts.BuildEmpathizePrompt(conversation, "");
+                    break;
+                case DesignStep.Define:
+                    prompt = Prompts.BuildDefinePrompt(conversation, "");
+                    break;
+                case DesignStep.Ideate:
+                    prompt = Prompts.BuildIdeatePrompt(conversation, "");
+                    break;
+                case DesignStep.Prototype:
+                    prompt = Prompts.BuildPrototypePrompt(conversation, "");
+                    break;
+                case DesignStep.Test:
+                    prompt = Prompts.BuildTestPrompt(conversation, "");
+                    break;
+            }
             StartCoroutine(SendToOllama(prompt, currentStep));
         }
         userInput.text = "";
@@ -112,7 +163,15 @@ public class OllamaScript : MonoBehaviour
                 else
                 {
                     stepConversations[step].Add($"AI: {output.Trim()}");
-                    AddStepMessage(output.Trim(), false, step); // Step chat
+                    // Split into sentences for step chat
+                    string[] sentences = output.Split(new[] { ". " }, System.StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var sentence in sentences)
+                    {
+                        string cleanSentence = sentence.Trim();
+                        if (!cleanSentence.EndsWith(".")) cleanSentence += ".";
+                        if (!string.IsNullOrWhiteSpace(cleanSentence))
+                            AddStepMessage(cleanSentence, false, step);
+                    }
                 }
             }
             catch (System.Exception e)
@@ -155,16 +214,7 @@ public class OllamaScript : MonoBehaviour
     public void AddStepMessage(string message, bool isUser, DesignStep step)
     {
         GameObject prefab = isUser ? userMessagePrefab : aiMessagePrefab;
-        RectTransform parent = null;
-
-        switch (step)
-        {
-            case DesignStep.Empathize: parent = empathizeContent; break;
-            case DesignStep.Define: parent = defineContent; break;
-            case DesignStep.Ideate: parent = ideateContent; break;
-            case DesignStep.Prototype: parent = prototypeContent; break;
-            case DesignStep.Test: parent = testContent; break;
-        }
+        RectTransform parent = GetStepContent(step);
 
         if (parent != null && !string.IsNullOrWhiteSpace(message))
         {
@@ -174,7 +224,62 @@ public class OllamaScript : MonoBehaviour
         }
     }
 
-    // AnalyzeAndDistribute and related methods remain unchanged
+    // --- Full Submit (Regenerate Unlocked Steps) ---
+    public void AnalyzeAndDistributeRespectingLocks()
+    {
+        // Gather locked step conversations as context
+        string lockedContext = "";
+        foreach (var step in stepLocked.Keys)
+        {
+            if (stepLocked[step])
+            {
+                Debug.Log($"Step {step} is LOCKED and will NOT be regenerated.");
+                lockedContext += $"[{step} Conversation]\n" + string.Join("\n", stepConversations[step]) + "\n";
+            }
+        }
+
+        // For each step, regenerate if not locked
+        foreach (var step in stepConversations.Keys)
+        {
+            if (stepLocked[step])
+            {
+                Debug.Log($"Skipping regeneration for {step} (LOCKED).");
+                continue; // Skip locked steps
+            }
+
+            // --- CLEAR CONTENT and HISTORY for this step ---
+            RectTransform content = GetStepContent(step);
+            if (content != null) ClearStepContent(content);
+            stepConversations[step].Clear();
+
+            Debug.Log($"Regenerating {step} (UNLOCKED).");
+            string mainHistory = string.Join("\n", mainConversationHistory);
+
+            string prompt = "";
+            switch (step)
+            {
+                case DesignStep.Empathize:
+                    prompt = Prompts.BuildEmpathizePrompt(mainHistory, lockedContext);
+                    break;
+                case DesignStep.Define:
+                    prompt = Prompts.BuildDefinePrompt(mainHistory, lockedContext);
+                    break;
+                case DesignStep.Ideate:
+                    prompt = Prompts.BuildIdeatePrompt(mainHistory, lockedContext);
+                    break;
+                case DesignStep.Prototype:
+                    prompt = Prompts.BuildPrototypePrompt(mainHistory, lockedContext);
+                    break;
+                case DesignStep.Test:
+                    prompt = Prompts.BuildTestPrompt(mainHistory, lockedContext);
+                    break;
+            }
+
+            StartCoroutine(SendToOllama(prompt, step));
+        }
+    }
+
+    // --- (Optional) Old AnalyzeAndDistribute for hexagonsPanel ---
     public void AnalyzeAndDistribute()
     {
         string conversation = string.Join("\n", mainConversationHistory);
@@ -270,7 +375,15 @@ public class OllamaScript : MonoBehaviour
         foreach (var kvp in stepTexts)
         {
             Debug.Log($"Pasting to {kvp.Key}: {kvp.Value}");
-            AddStepMessage(kvp.Value, false, kvp.Key); // false = AI message
+            // Split into sentences for step chat
+            string[] sentences = kvp.Value.Split(new[] { ". " }, System.StringSplitOptions.RemoveEmptyEntries);
+            foreach (var sentence in sentences)
+            {
+                string cleanSentence = sentence.Trim();
+                if (!cleanSentence.EndsWith(".")) cleanSentence += ".";
+                if (!string.IsNullOrWhiteSpace(cleanSentence))
+                    AddStepMessage(cleanSentence, false, kvp.Key);
+            }
         }
     }
 
@@ -285,6 +398,20 @@ public class OllamaScript : MonoBehaviour
     string EscapeJson(string s)
     {
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
+    }
+
+    // Helper to get the correct RectTransform for a step
+    RectTransform GetStepContent(DesignStep step)
+    {
+        switch (step)
+        {
+            case DesignStep.Empathize: return empathizeContent;
+            case DesignStep.Define: return defineContent;
+            case DesignStep.Ideate: return ideateContent;
+            case DesignStep.Prototype: return prototypeContent;
+            case DesignStep.Test: return testContent;
+            default: return null;
+        }
     }
 
     [System.Serializable]

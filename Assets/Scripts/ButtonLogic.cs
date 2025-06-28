@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -12,6 +13,9 @@ public class ButtonLogic : MonoBehaviour
     public GameObject testPanel;
 
     public OllamaScript ollamaScript; // Assign in Inspector
+
+    public GameObject fullSubmitButton;           // Assign in Inspector
+    public GameObject regenerateUnlockedButton;    // Assign in Inspector
 
     private Stack<GameObject> history = new Stack<GameObject>();
     private GameObject currentPanel;
@@ -29,6 +33,12 @@ public class ButtonLogic : MonoBehaviour
 
         if (ollamaScript != null)
             ollamaScript.currentStep = DesignStep.None;
+
+        if (fullSubmitButton != null)
+            fullSubmitButton.SetActive(true); // Starter is active at launch
+
+        if (regenerateUnlockedButton != null)
+            regenerateUnlockedButton.SetActive(false); // Not visible on Starter at launch
     }
 
     private void EnablePanel(GameObject panel, DesignStep step)
@@ -42,6 +52,14 @@ public class ButtonLogic : MonoBehaviour
         currentPanel = panel;
         if (ollamaScript != null)
             ollamaScript.currentStep = step;
+
+        // Show the Full Submit button ONLY on the Starter panel
+        if (fullSubmitButton != null)
+            fullSubmitButton.SetActive(panel == Starter);
+
+        // Show the Regenerate Unlocked Steps button ONLY when NOT on the Starter panel
+        if (regenerateUnlockedButton != null)
+            regenerateUnlockedButton.SetActive(panel != Starter);
     }
 
     public void GoToHexagons()
@@ -96,10 +114,41 @@ public class ButtonLogic : MonoBehaviour
                 else if (currentPanel == testPanel) ollamaScript.currentStep = DesignStep.Test;
                 else ollamaScript.currentStep = DesignStep.None;
             }
+
+            // Show/hide the Full Submit button
+            if (fullSubmitButton != null)
+                fullSubmitButton.SetActive(currentPanel == Starter);
+
+            // Show/hide the Regenerate Unlocked Steps button
+            if (regenerateUnlockedButton != null)
+                regenerateUnlockedButton.SetActive(currentPanel != Starter);
         }
         else
         {
             Debug.Log("No previous panel in history.");
         }
+    }
+
+    // --- Lock/Unlock Button Methods ---
+    public void ToggleLockEmpathize() { ollamaScript.ToggleStepLocked(DesignStep.Empathize); }
+    public void ToggleLockDefine()    { ollamaScript.ToggleStepLocked(DesignStep.Define); }
+    public void ToggleLockIdeate()    { ollamaScript.ToggleStepLocked(DesignStep.Ideate); }
+    public void ToggleLockPrototype() { ollamaScript.ToggleStepLocked(DesignStep.Prototype); }
+    public void ToggleLockTest()      { ollamaScript.ToggleStepLocked(DesignStep.Test); }
+
+    // --- Full Submit Button (Starter only) ---
+    public void FullSubmitRespectingLocks()
+    {
+        Debug.Log("FullSubmitRespectingLocks button pressed.");
+        if (ollamaScript != null)
+            ollamaScript.AnalyzeAndDistributeRespectingLocks();
+    }
+
+    // --- Regenerate Unlocked Steps Button (Not Starter) ---
+    public void RegenerateUnlockedSteps()
+    {
+        Debug.Log("RegenerateUnlockedSteps button pressed.");
+        if (ollamaScript != null)
+            ollamaScript.AnalyzeAndDistributeRespectingLocks();
     }
 }
