@@ -1,18 +1,22 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+// using UnityEngine;
+// using System.IO;
+// using SFB; // StandaloneFileBrowser
 
-public class FileUploaderManager : MonoBehaviour
-{
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+// public class FileUploadManager : MonoBehaviour
+// {
+//     public string uploadedContext = "";
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-}
+//     public void UploadCSV()
+//     {
+//         var paths = StandaloneFileBrowser.OpenFilePanel("Open CSV", "", "csv", false);
+//         if (paths.Length > 0 && File.Exists(paths[0]))
+//         {
+//             uploadedContext = File.ReadAllText(paths[0]);
+//             Debug.Log("CSV loaded:\n" + uploadedContext);
+//         }
+//     }
+
+
+// }
+
+

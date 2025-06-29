@@ -28,6 +28,30 @@ public class OllamaScript : MonoBehaviour
 
     [Header("Ollama Settings")]
     public string modelName = "deepseek-r1:7b";
+    public string GetEmpathizeContext()
+    {
+        // You can return the main project idea, or combine history, etc.
+        return string.Join("\n", mainConversationHistory);
+    }
+    public string GetStepMessages(DesignStep step)
+    {
+        if (stepConversations.ContainsKey(step))
+            return string.Join("\n", stepConversations[step]);
+        return "";
+    }
+
+    // And add:
+    public void SendCustomPromptToDefine(string prompt, System.Action<string> onComplete = null)
+    {
+        StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Define, onComplete));
+    }
+    public void SendCustomPromptToIdeate(string prompt, System.Action<string> onComplete = null)
+{
+    StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Ideate, onComplete));
+}
+
+
+
 
     [HideInInspector]
     public DesignStep currentStep = DesignStep.None; // Set by ButtonLogic
@@ -419,5 +443,44 @@ public class OllamaScript : MonoBehaviour
     {
         public string response;
     }
+
+    public void SendCustomPromptToEmpathize(string prompt, System.Action<string> onComplete = null)
+    {
+        StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Empathize, onComplete));
+    }
+
+    private IEnumerator SendCustomPromptCoroutine(string prompt, DesignStep step, System.Action<string> onComplete)
+    {
+        string json = $"{{\"model\": \"{modelName}\", \"prompt\": \"{EscapeJson(prompt)}\", \"stream\": false}}";
+        UnityWebRequest request = new UnityWebRequest("http://localhost:11434/api/generate", "POST");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            string raw = request.downloadHandler.text;
+            OllamaResponse res = JsonUtility.FromJson<OllamaResponse>(raw);
+
+            string output = res.response.Trim();
+            // Add to history if you want
+            stepConversations[step].Add($"AI: {output}");
+
+            // Display in UI or callback
+            onComplete?.Invoke(output);
+        }
+        else
+        {
+            onComplete?.Invoke("Error: " + request.error);
+        }
+    }
+    
+    
+
+
+
 }
 
