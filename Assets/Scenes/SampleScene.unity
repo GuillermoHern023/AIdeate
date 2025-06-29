@@ -283,7 +283,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: -0.0001449585, y: -0.000030517578}
-  m_SizeDelta: {x: 0, y: 300}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &44760769
 MonoBehaviour:
@@ -630,7 +630,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 61589449}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 376107846}
+        m_TargetAssemblyTypeName: UniqueButtons, Assembly-CSharp
+        m_MethodName: OnGenerateInsightsAndProblem
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &61589449
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1655,7 +1667,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 175670290}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 376107846}
+        m_TargetAssemblyTypeName: UniqueButtons, Assembly-CSharp
+        m_MethodName: OnRunIdeaSprint
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &175670290
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2872,6 +2896,7 @@ GameObject:
   - component: {fileID: 376107844}
   - component: {fileID: 376107843}
   - component: {fileID: 376107845}
+  - component: {fileID: 376107846}
   m_Layer: 0
   m_Name: ChatManager
   m_TagString: Untagged
@@ -2941,6 +2966,19 @@ MonoBehaviour:
   ollamaScript: {fileID: 376107843}
   fullSubmitButton: {fileID: 1706722015}
   regenerateUnlockedButton: {fileID: 1251850175}
+--- !u!114 &376107846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 376107842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5983055db34471459173ff609e6d65d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ollamaScript: {fileID: 376107843}
 --- !u!1 &389482338
 GameObject:
   m_ObjectHideFlags: 0
@@ -7674,7 +7712,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1020976620}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 376107846}
+        m_TargetAssemblyTypeName: UniqueButtons, Assembly-CSharp
+        m_MethodName: OnGenerateUserPersonas
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1020976620
 MonoBehaviour:
   m_ObjectHideFlags: 0

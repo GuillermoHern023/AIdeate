@@ -141,48 +141,79 @@ public class UniqueButtons : MonoBehaviour
         }
     }
     public void OnRunIdeaSprint()
-{
-    if (ollamaScript == null)
     {
-        Debug.LogWarning("OllamaScript reference missing!");
-        return;
+        if (ollamaScript == null)
+        {
+            Debug.LogWarning("OllamaScript reference missing!");
+            return;
+        }
+
+        // Get the latest problem statement from the Define step
+        string defineData = ollamaScript.GetStepMessages(DesignStep.Define);
+        string problemStatement = "";
+        foreach (var line in defineData.Split('\n'))
+        {
+            if (line.Trim().ToLower().StartsWith("problem statement"))
+            {
+                problemStatement = line.Trim();
+                break;
+            }
+        }
+        if (string.IsNullOrEmpty(problemStatement))
+        {
+            Debug.LogWarning("No problem statement found in Define step.");
+            return;
+        }
+
+        // Build the prompt
+        string ideateHistory = ollamaScript.GetStepMessages(DesignStep.Ideate);
+
+        string prompt =
+            "Based on the following problem statement and previous brainstorming conversation, use a mix of ideation techniques (such as SCAMPER, Worst Idea, and Brainstorm) to generate 1–5 creative solution ideas. " +
+            "For each idea, label it as 'Idea 1:', 'Idea 2:', etc. " +
+            "Keep each idea short, clear, and actionable. " +
+            "Do not include any introduction, explanation, or markdown—just the ideas.\n\n" +
+            "Problem statement:\n" + problemStatement + "\n\n" +
+            "Previous ideation conversation:\n" + ideateHistory + "\n\n" +
+            "Output format:\n" +
+            "Idea 1: [solution idea]\nIdea 2: [solution idea]";
+
+
+        ollamaScript.SendCustomPromptToIdeate(prompt, OnIdeasGenerated);
     }
 
-    // Get the latest problem statement from the Define step
-    string defineData = ollamaScript.GetStepMessages(DesignStep.Define);
-    string problemStatement = "";
-    foreach (var line in defineData.Split('\n'))
+    private void OnIdeasGenerated(string aiResponse)
     {
-        if (line.Trim().ToLower().StartsWith("problem statement"))
+        if (ollamaScript != null)
         {
-            problemStatement = line.Trim();
-            break;
+            // Remove <think>...</think> blocks and formatting
+            string cleaned = Regex.Replace(aiResponse, @"<think>.*?</think>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase)
+                                 .Replace("**", "")
+                                 .Replace("*", "")
+                                 .Replace("---", "")
+                                 .Replace("```", "")
+                                 .Replace("#", "");
+
+            // Split by "Idea" label
+            var matches = Regex.Split(cleaned, @"(?=Idea\s*\d*[:：])", RegexOptions.IgnoreCase);
+
+            foreach (var idea in matches)
+            {
+                string message = idea.Trim();
+                if (!string.IsNullOrEmpty(message) && message.ToLower().StartsWith("idea"))
+                {
+                    ollamaScript.AddStepMessage(message, false, DesignStep.Ideate);
+                }
+            }
+        }
+        else
+        {
+            Debug.Log("Ideas:\n" + aiResponse);
         }
     }
-    if (string.IsNullOrEmpty(problemStatement))
-    {
-        Debug.LogWarning("No problem statement found in Define step.");
-        return;
-    }
 
-    // Build the prompt
-    string ideateHistory = ollamaScript.GetStepMessages(DesignStep.Ideate);
-
-string prompt =
-    "Based on the following problem statement and previous brainstorming conversation, use a mix of ideation techniques (such as SCAMPER, Worst Idea, and Brainstorm) to generate 1–5 creative solution ideas. " +
-    "For each idea, label it as 'Idea 1:', 'Idea 2:', etc. " +
-    "Keep each idea short, clear, and actionable. " +
-    "Do not include any introduction, explanation, or markdown—just the ideas.\n\n" +
-    "Problem statement:\n" + problemStatement + "\n\n" +
-    "Previous ideation conversation:\n" + ideateHistory + "\n\n" +
-    "Output format:\n" +
-    "Idea 1: [solution idea]\nIdea 2: [solution idea]";
-
-
-    ollamaScript.SendCustomPromptToIdeate(prompt, OnIdeasGenerated);
-}
-
-private void OnIdeasGenerated(string aiResponse)
+// Callback to split and display each mockup idea
+private void OnPrototypeIdeasGenerated(string aiResponse)
 {
     if (ollamaScript != null)
     {
@@ -194,23 +225,25 @@ private void OnIdeasGenerated(string aiResponse)
                              .Replace("```", "")
                              .Replace("#", "");
 
-        // Split by "Idea" label
-        var matches = Regex.Split(cleaned, @"(?=Idea\s*\d*[:：])", RegexOptions.IgnoreCase);
+        // Split by "Mockup" label
+        var matches = Regex.Split(cleaned, @"(?=Mockup\s*\d*[:：])", RegexOptions.IgnoreCase);
 
-        foreach (var idea in matches)
+        foreach (var mockup in matches)
         {
-            string message = idea.Trim();
-            if (!string.IsNullOrEmpty(message) && message.ToLower().StartsWith("idea"))
+            string message = mockup.Trim();
+            if (!string.IsNullOrEmpty(message) && message.ToLower().StartsWith("mockup"))
             {
-                ollamaScript.AddStepMessage(message, false, DesignStep.Ideate);
+                ollamaScript.AddStepMessage(message, false, DesignStep.Prototype);
             }
         }
     }
     else
     {
-        Debug.Log("Ideas:\n" + aiResponse);
+        Debug.Log("Prototype Mockups:\n" + aiResponse);
     }
 }
+
+
 
 }
 

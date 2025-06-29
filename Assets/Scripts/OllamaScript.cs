@@ -46,9 +46,14 @@ public class OllamaScript : MonoBehaviour
         StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Define, onComplete));
     }
     public void SendCustomPromptToIdeate(string prompt, System.Action<string> onComplete = null)
+    {
+        StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Ideate, onComplete));
+    }
+    public void SendCustomPromptToPrototype(string prompt, System.Action<string> onComplete = null)
 {
-    StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Ideate, onComplete));
+    StartCoroutine(SendCustomPromptCoroutine(prompt, DesignStep.Prototype, onComplete));
 }
+
 
 
 
@@ -478,7 +483,7 @@ public class OllamaScript : MonoBehaviour
         }
     }
     
-    
+
 
 
 
